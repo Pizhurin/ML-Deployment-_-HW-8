@@ -1,0 +1,33 @@
+apiVersion: 1
+groups:
+  - name: slo_alerts
+    rules:
+      # SLO 1: p95 Latency < 1s
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum(rate(request_latency_seconds_bucket[5m])) by (le)) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request latency detected"
+          description: "p95 latency exceeded 1s for 2 minutes. Current value: {{ $value }}s"
+
+      # SLO 2: Error Rate < 1%
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.01
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate exceeded 1%. Current value: {{ $value | humanizePercentage }}"
+
+      # SLO 3: Availability > 99%
+      - alert: ServiceDown
+        expr: up{job="ml_service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ML Service is down"
+          description: "ml_service has been unreachable for more than 1 minute."
